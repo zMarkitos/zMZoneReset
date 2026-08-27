@@ -1,0 +1,45 @@
+name: zMZoneReset
+version: '${project.version}'
+main: dev.zm.zonereset.zMZoneReset
+author: zMarkitos_
+api-version: '1.19'
+description: Automatic zone restoration plugin for Minecraft.
+folia-supported: true
+
+softdepend:
+  - PlaceholderAPI
+
+commands:
+  zmr:
+    description: Main zMZoneReset command
+    usage: /zmr <subcommand> [arguments]
+    aliases: [ zmzonereset, zonereset ]
+    permission: zmzonereset.use
+
+permissions:
+  zmzonereset.*:
+    description: Full access to zMZoneReset
+    default: op
+    children:
+      zmzonereset.admin: true
+      zmzonereset.reset: true
+      zmzonereset.reload: true
+
+  zmzonereset.admin:
+    description: Full zone management access
+    default: op
+    children:
+      zmzonereset.reset: true
+      zmzonereset.reload: true
+
+  zmzonereset.reset:
+    description: Allows forcing a zone reset
+    default: op
+
+  zmzonereset.reload:
+    description: Allows reloading the plugin
+    default: op
+
+  zmzonereset.use:
+    description: Basic access to /zmr
+    default: op

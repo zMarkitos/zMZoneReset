@@ -1,0 +1,259 @@
+# ============================================================
+# zMZoneReset Configuration
+# ============================================================
+
+# Do not modify
+config-version: 1
+
+# ============================================================
+#  GLOBAL SETTINGS
+#  Affects the plugin's core behavior across every zone.
+# ============================================================
+settings:
+  # Enables verbose console logging for troubleshooting purposes.
+  # Set to 'true' only when diagnosing issues, as it generates
+  # significant log output.
+  debug: false
+
+  # Specifies the language file to load from the '/lang' directory.
+  # The plugin appends '.yml' automatically.
+  # Example: "EN" loads '/lang/EN.yml'.
+  language: "EN"
+
+  # Defines how time remaining is formatted in chat, GUIs,
+  # and placeholders.
+  # Valid options:
+  #   1 = Clock style (e.g., 01:30)
+  #   2 = Short text   (e.g., 1m 30s)
+  #   3 = Verbose text (e.g., 1 minute 30 seconds)
+  timer-format: 3
+
+# ============================================================
+#  PERFORMANCE TUNING
+#  Controls the reset scheduler to prevent server lag.
+#  These settings are critical for maintaining TPS on busy
+#  servers.
+# ============================================================
+performance:
+  # When enabled, the plugin dynamically adjusts the reset
+  # workload based on real-time server TPS to mitigate lag
+  # spikes.
+  adaptive: true
+
+  # The maximum duration (in milliseconds) the reset process
+  # is allowed to run per game tick.
+  # Lower values are safer for performance but increase reset
+  # completion time.
+  max-time-per-tick-ms: 4
+
+  # The minimum workload budget allocated when the server is
+  # under heavy stress (e.g., low TPS).
+  min-time-per-tick-ms: 1
+
+  # The TPS threshold used to determine when to reduce the
+  # reset workload. If TPS drops below this value, the plugin
+  # scales back operations to preserve server stability.
+  target-tps: 19.0
+
+  # The maximum number of distinct zones that can perform a
+  # reset simultaneously. Increase this value cautiously.
+  max-concurrent-resets: 1
+
+# ============================================================
+#  RESET STRATEGY
+#  Defines default methodologies for restoring zones.
+# ============================================================
+reset:
+  # The default strategy assigned to newly created zones.
+  # Available strategies: AUTO, DIFF, SNAPSHOT.
+  # - DIFF:   Tracks only changed blocks (fast, lower memory).
+  # - SNAPSHOT: Saves a full state (slower, but safer for large
+  #    changes).
+  # - AUTO:   Dynamically switches between DIFF and SNAPSHOT
+  #    based on the threshold below.
+  strategy: AUTO
+
+  auto:
+    # When using the 'AUTO' strategy, the plugin switches from
+    # DIFF to SNAPSHOT if the percentage of changed blocks
+    # exceeds this threshold.
+    diff-threshold: 30
+
+# ============================================================
+#  DATA STORAGE
+#  Manages how snapshot files are persisted to disk.
+# ============================================================
+storage:
+  # Compression algorithm applied to saved snapshot files.
+  # - ZSTD:  Offers superior speed and compression ratio
+  #    (requires native library support).
+  # - GZIP:  Standard fallback, guaranteed to work on all Java
+  #    environments.
+  compression: ZSTD
+
+# ============================================================
+#  PLAYER SECURITY & INTERACTIONS
+#  Handles player safety and block modifications during resets.
+# ============================================================
+security:
+  players:
+    # Defines the plugin's response to players inside a zone
+    # during a reset.
+    # Valid options:
+    #   ALLOW            : No action taken.
+    #   WARN             : Sends a chat message only.
+    #   WARN_AND_BLOCK   : Sends a message and prevents
+    #      building/interactions.
+    #   TELEPORT         : Moves players to a safe location
+    #      (configured below).
+    action-during-reset: WARN_AND_BLOCK
+
+  # Prevents players from placing, breaking, or interacting with
+  # blocks while a zone is actively resetting.
+  block-interactions-during-reset: true
+
+  # Determines which dynamic entities are removed prior to a
+  # reset to ensure a clean restoration.
+  entity-cleanup:
+    # Removes all dropped item entities inside the zone.
+    items: true
+    # Removes primed TNT and active explosions.
+    tnt: true
+    # Removes arrows, fireballs, and other projectiles.
+    projectiles: true
+    # Preserves armor stands by default to avoid ruining
+    # decorative builds. Set to 'true' to remove them.
+    armor-stands: false
+    # Removes falling blocks (e.g., sand, gravel) to prevent
+    # physics conflicts.
+    falling-blocks: true
+
+    # A list of additional Bukkit EntityType names to remove.
+    # Example: ["WITCH", "CREEPER", "SHULKER"].
+    # Leave empty if no special cleanup is required.
+    custom: []
+
+# ============================================================
+#  GLOBAL COUNTDOWN ANNOUNCEMENTS
+#  Broadcasts pre-reset countdowns to the entire server.
+#  These are triggered based on the zone's internal timer.
+# ============================================================
+countdown-announcements:
+  # Toggles global countdown messages for all online players.
+  enabled: true
+
+  # Defines specific time intervals (in seconds) at which global
+  # announcements are sent prior to the zone reset.
+  # Example: [60, 30, 10] triggers announcements at 60s, 30s,
+  # and 10s remaining.
+  announce-before-seconds: [60, 30, 10]
+
+  # Sets the number of final seconds that trigger a rapid,
+  # per-second countdown (e.g., 5, 4, 3, 2, 1).
+  # Set to '0' to disable the per-second ticker entirely.
+  last-countdown-seconds: 5
+
+  title:
+    # Enables an on-screen title for every countdown tick.
+    enabled: true
+    # Title animation timings measured in server ticks
+    # (20 ticks = 1 second).
+    fade-in: 5
+    stay: 30
+    fade-out: 5
+
+  sounds:
+    # Sound effect played for each standard countdown tick.
+    # Leave empty ("") to disable.
+    countdown: BLOCK_NOTE_BLOCK_PLING
+    # Sound effect played at the very final second (e.g., "1").
+    # Leave empty ("") to disable.
+    final: BLOCK_NOTE_BLOCK_BASS
+
+# ============================================================
+#  ZONE-SPECIFIC RESET NOTIFICATIONS
+#  Sends warnings exclusively to players currently situated
+#  inside the zone being reset.
+# ============================================================
+reset-notifications:
+  # Toggles the reminder system for occupants inside the zone.
+  enabled: true
+
+  # Time in seconds between repeated reminder messages while a
+  # zone is in the process of resetting.
+  # Low values increase chat frequency; higher values reduce
+  # screen noise.
+  warning-interval-seconds: 60
+
+  title:
+    # On-screen title and subtitle displayed to players inside
+    # the zone. Supports MiniMessage formatting for colors,
+    # gradients, and styling.
+    title: "<red><bold>Zone Reset</bold></red>"
+    subtitle: "<yellow>{zone}</yellow> <gray>is resetting</gray>"
+
+    # Animation timings in ticks.
+    fade-in: 10
+    stay: 40
+    fade-out: 10
+
+  sounds:
+    # Sound played immediately when the reset process begins.
+    start: BLOCK_NOTE_BLOCK_PLING
+    # Sound played each time a reminder is sent.
+    warning: BLOCK_NOTE_BLOCK_BELL
+    # Sound played when the reset finishes successfully.
+    complete: ENTITY_PLAYER_LEVELUP
+
+# ============================================================
+#  TELEPORTATION BEHAVIOR
+#  Applies when the security action is set to 'TELEPORT'.
+#  Defines how safe locations are determined for displaced
+#  players.
+# ============================================================
+teleport-on-reset:
+  # Prioritizes the zone's configured spawn location as the
+  # destination before attempting a fallback search.
+  use-zone-spawn-if-set: true
+
+  # Instructs the plugin to scan for a solid, breathable block
+  # to serve as a safe standing location.
+  search-surface: true
+
+  # The block radius used when searching for a safe spot around
+  # the initial target point.
+  safety-radius: 3
+
+# ============================================================
+#  PROGRESS BAR PLACEHOLDER
+#  Configures the appearance of the
+#  %zmzonereset_progress_<zone>% placeholder.
+#  This visual represents the elapsed time since the last reset
+#  (0% = freshly reset, 100% = imminent reset).
+# ============================================================
+progress-bar:
+  # Total number of characters used in the bar (filled + empty
+  # segments combined).
+  length: 10
+
+  # Character representing the completed portion of the timer.
+  filled-char: "█"
+
+  # Character representing the remaining portion of the timer.
+  empty-char: "░"
+
+  # Hex color code for the filled segment. Supports standard
+  # color codes (e.g., &a) as well as modern hex formats
+  # (e.g., #55FF55).
+  filled-color: "#55FF55"
+
+  # Hex color code for the empty segment.
+  empty-color: "#555555"
+
+  # Delimiter characters rendered at the start of the bar.
+  # Set to "" (empty string) to remove the border.
+  border-left: "&8["
+
+  # Delimiter characters rendered at the end of the bar.
+  # Set to "" (empty string) to remove the border.
+  border-right: "&8]"

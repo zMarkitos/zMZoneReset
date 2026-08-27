@@ -1,0 +1,191 @@
+# Do not modify
+message-version: 1
+
+prefix: "&#D3FF8B&lz&#D5FD92&lM&#D6FB99&lZ&#D8FA9F&lo&#D9F8A6&ln&#DBF6AD&le&#D9F8A6&lR&#D8FA9F&le&#D6FB99&ls&#D5FD92&le&#D3FF8B&lt &8»"
+
+general:
+  no-permission: "{prefix} &cYou don't have permission to execute this command."
+  player-only: "{prefix} &cThis command can only be used by players."
+  unknown-command: "{prefix} &cUnknown subcommand. Use &e/zonereset help &cfor help."
+  zone-not-found: "{prefix} &cThe zone &#FFF28B{zone} &cdoes not exist."
+  zone-already-exists: "{prefix} &cThe zone &#FFF28B{zone} &calready exists."
+  global-spawn-set: "{prefix} &aGlobal spawn set successfully."
+  global-spawn-clear: "{prefix} &aGlobal spawn removed."
+  reload: "{prefix} &aPlugin reloaded successfully."
+  update-join: "{prefix} &ePerforming an update check in the background."
+  update-available: "{prefix} &6Update available: &f{current} &8-> &a{latest} &7(ID: {resource})"
+  update-latest: "{prefix} &aYou are using the latest version &f{current}&a."
+
+wand:
+  name: "&fWand &8→ &#D3FF8B&lSELECTION"
+  lore:
+    - ""
+    - " &8| &fLeft Click: &#FFF28BPosition 1"
+    - " &8| &fRight Click: &#FFF28BPosition 2"
+    - ""
+    - "&#D3FF8B✔ Select the area!"
+  given: "{prefix} &aYou have been given the selection wand."
+  pos1-set: "{prefix} &fYou have set position 1 at &#FFF28B{x}, {y}, {z}&f."
+  pos2-set: "{prefix} &fYou have set position 2 at &#FFF28B{x}, {y}, {z}&f."
+  incomplete: "{prefix} &cYou must select two points with the wand."
+  different-worlds: "{prefix} &cThe positions must be in the same world."
+
+zones:
+  created: "{prefix} &aZone &#FFF28B{zone} &acreated successfully."
+  removed: "{prefix} &aZone &#FFF28B{zone} &aremoved."
+  enabled: "{prefix} &aZone &#FFF28B{zone} &aenabled."
+  disabled: "{prefix} &cZone &#FFF28B{zone} &cdisabled."
+  spawn-set: "{prefix} &aSpawn for zone &#FFF28B{zone} &aset."
+  spawn-clear: "{prefix} &aSpawn for zone &#FFF28B{zone} &aremoved."
+  teleported: "{prefix} &aTeleported to zone &#FFF28B{zone}&a."
+  reset-started: "{prefix} &aReset of &#FFF28B{zone} &astarted."
+  capture-started: "{prefix} &eCapturing snapshot of &#FFF28B{zone}&e, please wait..."
+  capture-done: "{prefix} &aSnapshot of &#FFF28B{zone} &asaved. &7({blocks} blocks)"
+  capture-failed: "{prefix} &cError capturing &#FFF28B{zone}&c: {error}"
+  saved: "{prefix} &aZone &#FFF28B{zone} &asaved."
+  broadcast:
+    resetting: "{prefix} &eThe zone &#FFF28B{zone} &eis resetting!"
+    reset-complete: "{prefix} &aThe zone &#FFF28B{zone} &ahas been successfully reset!"
+
+gui:
+  list-title: "&8Zone list - Page #{page}"
+  main-title: "&8Editing: {zone}"
+  settings-title: "&8Settings: {zone}"
+  info-title: "&8Information: {zone}"
+
+  next-page: "&fPage &8→ &#D3FF8B&lNext"
+  prev-page: "&fPage &8→ &#D3FF8B&lPrevious"
+  back: "&fNavigation &8→ &#FF4D2B&lBack"
+  close: "&fNavigation &8→ &#FF4D2B&lClose ✖"
+
+  zone-item-name: "&fZone &8→ &#D3FF8B&l{zone}"
+  zone-item-lore:
+    - ""
+    - " &8| &fStatus: &#70FF8B{status}"
+    - " &8| &fStrategy: &#FFF28B{strategy}"
+    - " &8| &fSnapshot: &#FFBF8B{snapshot}"
+    - ""
+    - "&#D3FF8B✔ Click to edit!"
+
+  main-settings: "&fEdit &8→ &#D3FF8B&lSettings"
+  main-settings-lore:
+    - ""
+    - " &8| &fAdjust zone parameters."
+    - " &8| &fStrategy, interval, etc."
+    - ""
+    - "&#D3FF8B✔ Click to configure!"
+
+  main-info: "&fInformation &8→ &#D3FF8B&lGeneral"
+  main-info-lore:
+    - ""
+    - " &8| &fView zone information."
+    - ""
+    - "&#D3FF8B✔ Click to view!"
+
+  main-teleport: "&fZone &8→ &#D3FF8B&lTeleport"
+  main-teleport-lore:
+    - ""
+    - " &8| &fTeleport to the zone's spawn."
+    - ""
+    - "&#D3FF8B✔ Click to teleport!"
+
+  settings-toggle: "&fSettings &8→ &#D3FF8B&lStatus"
+  settings-toggle-lore-enabled:
+    - ""
+    - " &8| &fCurrent status: &aEnabled"
+    - ""
+    - "&#D3FF8B✔ Click to disable."
+
+  settings-toggle-lore-disabled:
+    - ""
+    - " &8| &fCurrent status: &cDisabled"
+    - ""
+    - "&#D3FF8B✔ Click to enable."
+
+  settings-strategy: "&fSettings &8→ &#D3FF8B&lReset Strategy"
+  settings-strategy-lore:
+    - ""
+    - " &8| &fCurrent: &#FFF28B{strategy}"
+    - " &8| &7AUTO → DIFF → SNAPSHOT → AUTO"
+    - ""
+    - "&#D3FF8B✔ Click to change."
+
+  settings-interval: "&fSettings &8→ &#D3FF8B&lReset Interval"
+  settings-interval-lore:
+    - ""
+    - " &8| &fCurrent: &#8BE3FF{interval}"
+    - ""
+    - "&#D3FF8B✔ Click to set in chat."
+
+  settings-block: "&fSettings &8→ &#D3FF8B&lBlock Interaction"
+  settings-block-lore-true:
+    - ""
+    - " &8| &fCurrent: &aBlocked"
+    - ""
+    - "&#D3FF8B✔ Click to change."
+
+  settings-block-lore-false:
+    - ""
+    - " &8| &fCurrent: &cAllowed"
+    - ""
+    - "&#D3FF8B✔ Click to change."
+
+  settings-spawn: "&fSettings &8→ &#D3FF8B&lSet Spawn"
+  symbol-true: "&a✔"
+  symbol-false: "&c✖"
+  interval-disabled: "&cDisabled"
+  settings-interval-chat-prompt: "{prefix} &eType the interval in chat (e.g., 10s, 1m, 1h). Type 'cancel' to cancel."
+  settings-interval-cancel: "{prefix} &cInterval setting cancelled."
+  settings-interval-invalid: "{prefix} &cInvalid format. Use formats like 10s or 1m."
+  settings-interval-success: "{prefix} &aInterval set to &e{interval}&a."
+  settings-capture: "&fSettings &8→ &#D3FF8B&lCapture Zone"
+  settings-capture-lore:
+    - ""
+    - " &8| &fCapture the current blocks"
+    - " &8| &fof the zone and save them."
+    - ""
+    - "&#D3FF8B✔ Click to capture."
+  settings-titles: "&fSettings &8→ &#D3FF8B&lTitles"
+  settings-titles-lore:
+    - ""
+    - " &8| &fStatus: &f{status}"
+    - ""
+    - "&#D3FF8B✔ Click to toggle."
+  settings-messages: "&fSettings &8→ &#D3FF8B&lMessages"
+  settings-messages-lore:
+    - ""
+    - " &8| &fStatus: &f{status}"
+    - ""
+    - "&#D3FF8B✔ Click to toggle."
+
+  settings-action: "&fSettings &8→ &#D3FF8B&lPlayer Action"
+  settings-action-lore:
+    - ""
+    - " &8| &fCurrent: &#FFF28B{action}"
+    - " &8| &7ALLOW → WARN → WARN_AND_BLOCK → TELEPORT"
+    - ""
+    - "&#D3FF8B✔ Click to change."
+
+  settings-spawn-lore:
+    - ""
+    - " &8| &fStatus: &f{status}"
+    - ""
+    - "&#D3FF8B✔ Click to set at your location."
+
+  info-general: "&fInformation &8→ &#D3FF8B&lGeneral"
+  info-general-lore:
+    - ""
+    - " &8| &fZone: &#D3FF8B{zone}"
+    - " &8| &fWorld: &#FFC770{world}"
+    - " &8| &fStatus: &#70FF8B{status}"
+    - " &8| &fStrategy: &#FFF28B{strategy}"
+    - " &8| &fSnapshot: &#FFBF8B{snapshot}"
+    - " &8| &fInterval: &#8BE3FF{interval}"
+    - " &8| &fMin: &#FF7070{minx}, {miny}, {minz}"
+    - " &8| &fMax: &#FF7070{maxx}, {maxy}, {maxz}"
+    - ""
+
+countdown:
+  message: "{prefix} &eThe zone &#FFF28B{zone} &ewill reset in &f{time}&e!"
+  title: "&6&lZone Reset"
+  subtitle: "&e{zone} &7in &f{time}"
