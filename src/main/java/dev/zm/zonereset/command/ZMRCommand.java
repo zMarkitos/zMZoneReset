@@ -116,8 +116,10 @@ public final class ZMRCommand implements CommandExecutor, TabCompleter {
         if (!checkPerm(sender, PERM_ADMIN))
             return;
         Player player = (Player) sender;
-        wandManager.giveWand(player);
-        player.sendMessage(langManager.getMessage("wand.given"));
+        runForPlayer(player, () -> {
+            wandManager.giveWand(player);
+            player.sendMessage(langManager.getMessage("wand.given"));
+        });
     }
 
     private void cmdCreate(CommandSender sender, String[] args) {
@@ -206,9 +208,11 @@ public final class ZMRCommand implements CommandExecutor, TabCompleter {
             if (!ensureZoneExists(sender, id))
                 return;
             Zone zone = zoneManager.getZone(id).get();
-            new ZoneMainMenu(player, zone, zoneManager, zoneRepository, langManager, scheduler).open();
+            runForPlayer(player, () -> new ZoneMainMenu(player, zone, zoneManager, zoneRepository, langManager,
+                    scheduler, snapshotCapture).open());
         } else {
-            new ZonesListMenu(player, zoneManager, zoneRepository, langManager, scheduler).open();
+            runForPlayer(player,
+                    () -> new ZonesListMenu(player, zoneManager, zoneRepository, langManager, scheduler).open());
         }
     }
 
@@ -325,6 +329,12 @@ public final class ZMRCommand implements CommandExecutor, TabCompleter {
         String id = args[1];
         if (!ensureZoneExists(sender, id))
             return;
+
+        // Evitar capturas concurrentes sobre la misma zona
+        if (snapshotCapture.isCapturing(id)) {
+            sender.sendMessage("§cYa hay una captura activa para la zona '" + id + "'. Espera a que termine.");
+            return;
+        }
 
         zoneManager.getZoneImpl(id).ifPresent(zone -> {
             World world = Bukkit.getWorld(zone.getWorldUID());
@@ -444,8 +454,18 @@ public final class ZMRCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        player.teleport(dest);
-        player.sendMessage(langManager.getMessage("zones.teleported", "zone", target));
+        // Teleporting a player is region-owned work on Folia. Dispatch to the
+        // player's current chunk so the call is always safe.
+        final Location destination = dest;
+        int chunkX = player.getLocation().getBlockX() >> 4;
+        int chunkZ = player.getLocation().getBlockZ() >> 4;
+        scheduler.runOnChunk(player.getWorld(), chunkX, chunkZ, () -> {
+            if (!player.isOnline()) {
+                return;
+            }
+            player.teleport(destination);
+            player.sendMessage(langManager.getMessage("zones.teleported", "zone", target));
+        });
     }
 
     private void cmdReload(CommandSender sender) {
@@ -551,6 +571,20 @@ public final class ZMRCommand implements CommandExecutor, TabCompleter {
         return list.stream()
                 .filter(s -> s.toLowerCase(Locale.ROOT).startsWith(lower))
                 .collect(Collectors.toList());
+    }
+
+    /** Runs player-owned work on the player's region (Folia) or main thread (Paper). */
+    private void runForPlayer(Player player, Runnable action) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+        int chunkX = player.getLocation().getBlockX() >> 4;
+        int chunkZ = player.getLocation().getBlockZ() >> 4;
+        scheduler.runOnChunk(player.getWorld(), chunkX, chunkZ, () -> {
+            if (player.isOnline()) {
+                action.run();
+            }
+        });
     }
 
     private void loadGlobalSpawn() {

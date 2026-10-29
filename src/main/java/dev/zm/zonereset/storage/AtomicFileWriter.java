@@ -33,7 +33,6 @@ public final class AtomicFileWriter {
             }
         }
 
-        long writtenChecksum;
         try (FileOutputStream fos = new FileOutputStream(tempFile);
                 BufferedOutputStream bos = new BufferedOutputStream(fos, 65_536)) {
             bos.write(data);
@@ -41,15 +40,8 @@ public final class AtomicFileWriter {
             fos.getFD().sync();
         }
 
-        writtenChecksum = calculateCRC32(tempFile);
-
-        long verifyChecksum = calculateCRC32(tempFile);
-        if (writtenChecksum != verifyChecksum) {
-            tempFile.delete();
-            throw new IOException(
-                    "CRC32 verification failed for " + tempFile.getName() +
-                            " (written=" + writtenChecksum + ", read=" + verifyChecksum + ")");
-        }
+        // One checksum pass is enough; the old code read the whole file twice.
+        long writtenChecksum = calculateCRC32(tempFile);
 
         try {
             Files.move(tempFile.toPath(), finalFile.toPath(),

@@ -13,6 +13,8 @@ public class PluginConfig {
     private final int maxBlocksPerTick;
     private final double maxMsptThreshold;
     private final boolean requireConfirmCommand;
+    private final int captureChunksPerTick;
+    private final int diffThresholdPercent;
 
     // countdown-announcements
     private final boolean countdownEnabled;
@@ -42,6 +44,8 @@ public class PluginConfig {
             this.maxBlocksPerTick = 1000;
             this.maxMsptThreshold = 45.0;
             this.requireConfirmCommand = false;
+            this.captureChunksPerTick = 2;
+            this.diffThresholdPercent = 30;
             this.countdownEnabled = true;
             this.announceBeforeSeconds = List.of(60, 30, 10);
             this.lastCountdownSeconds = 5;
@@ -65,6 +69,9 @@ public class PluginConfig {
             this.maxBlocksPerTick = section.getInt("performance.max-time-per-tick-ms", 4) * 250;
             this.maxMsptThreshold = section.getDouble("performance.max-mspt-threshold", 45.0);
             this.requireConfirmCommand = section.getBoolean("settings.require-confirm-command", false);
+            this.captureChunksPerTick = Math.max(1, section.getInt("performance.capture-chunks-per-tick", 2));
+            int rawThreshold = section.getInt("reset.auto.diff-threshold", 30);
+            this.diffThresholdPercent = Math.max(1, Math.min(99, rawThreshold));
 
             this.countdownEnabled = section.getBoolean("countdown-announcements.enabled", true);
             List<Integer> raw = section.getIntegerList("countdown-announcements.announce-before-seconds");
@@ -74,8 +81,10 @@ public class PluginConfig {
             this.countdownFadeIn = section.getInt("countdown-announcements.title.fade-in", 5);
             this.countdownStay = section.getInt("countdown-announcements.title.stay", 30);
             this.countdownFadeOut = section.getInt("countdown-announcements.title.fade-out", 5);
-            this.countdownSound = section.getString("countdown-announcements.sounds.countdown", "BLOCK_NOTE_BLOCK_PLING");
-            this.countdownFinalSound = section.getString("countdown-announcements.sounds.final", "BLOCK_NOTE_BLOCK_BASS");
+            this.countdownSound = section.getString("countdown-announcements.sounds.countdown",
+                    "BLOCK_NOTE_BLOCK_PLING");
+            this.countdownFinalSound = section.getString("countdown-announcements.sounds.final",
+                    "BLOCK_NOTE_BLOCK_BASS");
             this.progressBarLength = Math.max(1, section.getInt("progress-bar.length", 20));
             this.progressFilledChar = section.getString("progress-bar.filled-char", "█");
             this.progressEmptyChar = section.getString("progress-bar.empty-char", "░");
@@ -86,28 +95,99 @@ public class PluginConfig {
         }
     }
 
-    public boolean isDebugMode() { return debugMode; }
-    public String getLanguage() { return language; }
-    public int getTimerFormat() { return timerFormat; }
-    public int getMaxBlocksPerTick() { return maxBlocksPerTick; }
-    public double getMaxMsptThreshold() { return maxMsptThreshold; }
-    public boolean isRequireConfirmCommand() { return requireConfirmCommand; }
+    public boolean isDebugMode() {
+        return debugMode;
+    }
 
-    public boolean isCountdownEnabled() { return countdownEnabled; }
-    public List<Integer> getAnnounceBeforeSeconds() { return announceBeforeSeconds; }
-    public int getLastCountdownSeconds() { return lastCountdownSeconds; }
-    public boolean isCountdownTitleEnabled() { return countdownTitleEnabled; }
-    public int getCountdownFadeIn() { return countdownFadeIn; }
-    public int getCountdownStay() { return countdownStay; }
-    public int getCountdownFadeOut() { return countdownFadeOut; }
-    public String getCountdownSound() { return countdownSound; }
-    public String getCountdownFinalSound() { return countdownFinalSound; }
+    public String getLanguage() {
+        return language;
+    }
 
-    public int getProgressBarLength() { return progressBarLength; }
-    public String getProgressFilledChar() { return progressFilledChar; }
-    public String getProgressEmptyChar() { return progressEmptyChar; }
-    public String getProgressFilledColor() { return progressFilledColor; }
-    public String getProgressEmptyColor() { return progressEmptyColor; }
-    public String getProgressBorderLeft() { return progressBorderLeft; }
-    public String getProgressBorderRight() { return progressBorderRight; }
+    public int getTimerFormat() {
+        return timerFormat;
+    }
+
+    public int getMaxBlocksPerTick() {
+        return maxBlocksPerTick;
+    }
+
+    public double getMaxMsptThreshold() {
+        return maxMsptThreshold;
+    }
+
+    public boolean isRequireConfirmCommand() {
+        return requireConfirmCommand;
+    }
+
+    public int getCaptureChunksPerTick() {
+        return captureChunksPerTick;
+    }
+
+    public int getDiffThresholdPercent() {
+        return diffThresholdPercent;
+    }
+
+    public boolean isCountdownEnabled() {
+        return countdownEnabled;
+    }
+
+    public List<Integer> getAnnounceBeforeSeconds() {
+        return announceBeforeSeconds;
+    }
+
+    public int getLastCountdownSeconds() {
+        return lastCountdownSeconds;
+    }
+
+    public boolean isCountdownTitleEnabled() {
+        return countdownTitleEnabled;
+    }
+
+    public int getCountdownFadeIn() {
+        return countdownFadeIn;
+    }
+
+    public int getCountdownStay() {
+        return countdownStay;
+    }
+
+    public int getCountdownFadeOut() {
+        return countdownFadeOut;
+    }
+
+    public String getCountdownSound() {
+        return countdownSound;
+    }
+
+    public String getCountdownFinalSound() {
+        return countdownFinalSound;
+    }
+
+    public int getProgressBarLength() {
+        return progressBarLength;
+    }
+
+    public String getProgressFilledChar() {
+        return progressFilledChar;
+    }
+
+    public String getProgressEmptyChar() {
+        return progressEmptyChar;
+    }
+
+    public String getProgressFilledColor() {
+        return progressFilledColor;
+    }
+
+    public String getProgressEmptyColor() {
+        return progressEmptyColor;
+    }
+
+    public String getProgressBorderLeft() {
+        return progressBorderLeft;
+    }
+
+    public String getProgressBorderRight() {
+        return progressBorderRight;
+    }
 }

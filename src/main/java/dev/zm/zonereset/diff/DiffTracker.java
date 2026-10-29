@@ -50,7 +50,7 @@ public final class DiffTracker {
         String blockDataStr = state.getBlockData().getAsString();
         byte[] nbt = null;
         if (state instanceof TileState) {
-            nbt = entitySerializer.captureBlockEntity(state.getBlock());
+            nbt = entitySerializer.captureBlockEntity(state);
         }
 
         BlockRecord original = new BlockRecord(packedPos, blockDataStr, nbt);

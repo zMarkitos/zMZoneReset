@@ -127,7 +127,10 @@ public final class ZoneImpl implements Zone {
     }
 
     public long decrementRemainingTicks(long amount) {
-        return remainingTicks.addAndGet(-amount);
+        // Clamp at zero: a zone that spends a long time disabled/resetting
+        // must not accumulate a huge negative value that fires immediately
+        // when it becomes READY again.
+        return remainingTicks.updateAndGet(current -> Math.max(0L, current - amount));
     }
 
     @Override

@@ -89,16 +89,26 @@ public final class ResetEventListener implements Listener {
             if (!zone.contains(player.getLocation().getBlockX(), player.getLocation().getBlockY(), player.getLocation().getBlockZ())) {
                 continue;
             }
-            player.sendMessage(message);
-            if (useTitle) {
-                player.sendTitle(title, subtitle,
-                        plugin.getConfig().getInt("reset-notifications.title.fade-in", 10),
-                        plugin.getConfig().getInt("reset-notifications.title.stay", 40),
-                        plugin.getConfig().getInt("reset-notifications.title.fade-out", 10));
-            }
-            if (sound != null) {
-                player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-            }
+
+            // Player state (inventory, titles, sounds) must run on the owning
+            // region on Folia. On Paper this is simply the main thread queue.
+            int playerChunkX = player.getLocation().getBlockX() >> 4;
+            int playerChunkZ = player.getLocation().getBlockZ() >> 4;
+            scheduler.runOnChunk(world, playerChunkX, playerChunkZ, () -> {
+                if (!player.isOnline()) {
+                    return;
+                }
+                player.sendMessage(message);
+                if (useTitle) {
+                    player.sendTitle(title, subtitle,
+                            plugin.getConfig().getInt("reset-notifications.title.fade-in", 10),
+                            plugin.getConfig().getInt("reset-notifications.title.stay", 40),
+                            plugin.getConfig().getInt("reset-notifications.title.fade-out", 10));
+                }
+                if (sound != null) {
+                    player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+                }
+            });
         }
     }
 
@@ -117,7 +127,13 @@ public final class ResetEventListener implements Listener {
             if (!zone.contains(player.getLocation().getBlockX(), player.getLocation().getBlockY(), player.getLocation().getBlockZ())) {
                 continue;
             }
-            scheduler.runSync(() -> player.teleport(fallback));
+            int playerChunkX = player.getLocation().getBlockX() >> 4;
+            int playerChunkZ = player.getLocation().getBlockZ() >> 4;
+            scheduler.runOnChunk(world, playerChunkX, playerChunkZ, () -> {
+                if (player.isOnline()) {
+                    player.teleport(fallback);
+                }
+            });
         }
     }
 

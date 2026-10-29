@@ -23,7 +23,9 @@ public final class ChunkZoneIndex {
 
         for (ChunkCoordinate chunk : chunks) {
             long packed = chunk.packed();
-            chunkMap.computeIfAbsent(packed, $ -> new HashSet<>()).add(zone);
+            // Concurrent set: chunk lookups can happen off the registration
+            // thread (explosions, async API calls, Folia region threads).
+            chunkMap.computeIfAbsent(packed, $ -> ConcurrentHashMap.newKeySet()).add(zone);
         }
     }
 

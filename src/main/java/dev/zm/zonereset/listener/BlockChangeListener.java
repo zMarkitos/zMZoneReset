@@ -16,6 +16,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 public final class BlockChangeListener implements Listener {
 
@@ -30,26 +31,30 @@ public final class BlockChangeListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
-        handleBlockChange(event, block, event.getBlock().getState(), event.getPlayer());
+        handleBlockChange(event, block, event.getPlayer(), block::getState);
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Block block = event.getBlockPlaced();
-        handleBlockChange(event, block, event.getBlockReplacedState(), event.getPlayer());
+        handleBlockChange(event, block, event.getPlayer(), event::getBlockReplacedState);
     }
 
     private void handleBlockChange(org.bukkit.event.Cancellable event,
             Block block,
-            org.bukkit.block.BlockState oldState,
-            Player player) {
+            Player player,
+            Supplier<org.bukkit.block.BlockState> oldStateSupplier) {
         UUID worldUID = block.getWorld().getUID();
-        int cx = block.getChunk().getX();
-        int cz = block.getChunk().getZ();
+        // Avoid Block#getChunk(): raw coordinates are enough and don't touch
+        // the chunk/entity machinery on this very hot event path.
+        int cx = block.getX() >> 4;
+        int cz = block.getZ() >> 4;
         Set<Zone> zones = zoneManager.getZonesAt(worldUID, cx, cz);
 
         if (zones.isEmpty())
             return;
+
+        org.bukkit.block.BlockState oldState = null;
 
         for (Zone zone : zones) {
             if (!zone.contains(block.getX(), block.getY(), block.getZ())) {
@@ -72,6 +77,11 @@ public final class BlockChangeListener implements Listener {
             }
 
             if (status == ZoneStatus.READY) {
+                // The old state is only materialized when a nearby zone is
+                // actually tracking changes, not for every block break/place.
+                if (oldState == null) {
+                    oldState = oldStateSupplier.get();
+                }
                 diffTracker.trackChange(zone, oldState);
             }
         }

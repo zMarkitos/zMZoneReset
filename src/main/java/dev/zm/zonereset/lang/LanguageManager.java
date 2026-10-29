@@ -5,19 +5,24 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 
 public final class LanguageManager {
 
     private final JavaPlugin plugin;
     private final ZoneLogger logger;
-    
-    private final Map<String, String> messages = new HashMap<>();
-    private final Map<String, List<String>> listMessages = new HashMap<>();
-    private String prefix = "&8[&ezMZoneReset&8] &7";
+
+    /**
+     * Replaced atomically on reload. Never mutated in place: timers, async
+     * tasks and command handling may read messages while /zmr reload runs.
+     */
+    private volatile Map<String, String> messages = Collections.emptyMap();
+    private volatile Map<String, List<String>> listMessages = Collections.emptyMap();
+    private volatile String prefix = "&8[&ezMZoneReset&8] &7";
 
     public LanguageManager(JavaPlugin plugin, ZoneLogger logger) {
         this.plugin = plugin;
@@ -25,9 +30,10 @@ public final class LanguageManager {
     }
 
     public void load(String langCode) {
-        messages.clear();
-        listMessages.clear();
-        
+        Map<String, String> newMessages = new HashMap<>();
+        Map<String, List<String>> newListMessages = new HashMap<>();
+        String newPrefix;
+
         File langFolder = new File(plugin.getDataFolder(), "lang");
         if (!langFolder.exists()) {
             langFolder.mkdirs();
@@ -44,18 +50,52 @@ public final class LanguageManager {
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(langFile);
         
-        this.prefix = config.getString("prefix", "&8[&ezMZoneReset&8] &7");
-        
+        try (java.io.InputStream defLangStream = plugin.getResource("lang/" + langFile.getName())) {
+            if (defLangStream != null) {
+                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.InputStreamReader(defLangStream, java.nio.charset.StandardCharsets.UTF_8));
+                boolean changed = false;
+                for (String key : defConfig.getKeys(true)) {
+                    if (!config.contains(key)) {
+                        config.set(key, defConfig.get(key));
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    try {
+                        config.save(langFile);
+                        logger.info("Updated language file {} with missing keys.", langFile.getName());
+                    } catch (Exception e) {
+                        logger.error("Could not update language file {}", langFile.getName());
+                    }
+                }
+            }
+        } catch (java.io.IOException e) {
+            logger.warn("Could not read bundled language file: {}", e.getMessage());
+        }
+
+        newPrefix = config.getString("prefix", "&8[&ezMZoneReset&8] &7");
+
         for (String key : config.getKeys(true)) {
             if (!config.isConfigurationSection(key)) {
                 if (config.isList(key)) {
-                    listMessages.put(key, config.getStringList(key));
+                    newListMessages.put(key, config.getStringList(key));
                 } else {
-                    messages.put(key, config.getString(key));
+                    newMessages.put(key, config.getString(key));
                 }
             }
         }
-        
+
+        if (newMessages.isEmpty()) {
+            logger.warn("Language file {} contained no messages; keeping the previous language.", langFile.getName());
+            return;
+        }
+
+        // Single atomic publication point: readers never observe a half-loaded file.
+        this.prefix = newPrefix;
+        this.listMessages = Collections.unmodifiableMap(newListMessages);
+        this.messages = Collections.unmodifiableMap(newMessages);
+
         logger.info("Language {} loaded successfully.", langFile.getName());
     }
 

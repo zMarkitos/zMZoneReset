@@ -24,7 +24,8 @@ public class ChatInputListener implements Listener {
     private final ZoneScheduler scheduler;
     private final dev.zm.zonereset.core.logging.ZoneLogger logger;
 
-    public ChatInputListener(ZoneManagerAPI zoneManager, ZoneRepository zoneRepository, LanguageManager langManager, ZoneScheduler scheduler, dev.zm.zonereset.core.logging.ZoneLogger logger) {
+    public ChatInputListener(ZoneManagerAPI zoneManager, ZoneRepository zoneRepository, LanguageManager langManager,
+            ZoneScheduler scheduler, dev.zm.zonereset.core.logging.ZoneLogger logger) {
         this.zoneManager = zoneManager;
         this.zoneRepository = zoneRepository;
         this.langManager = langManager;
@@ -44,7 +45,7 @@ public class ChatInputListener implements Listener {
             if (message.equalsIgnoreCase("cancel") || message.equalsIgnoreCase("cancelar")) {
                 ZoneSettingsMenu.pendingIntervalInput.remove(player.getUniqueId());
                 player.sendMessage(langManager.getMessage("gui.settings-interval-cancel"));
-                
+
                 scheduler.runSync(() -> {
                     zoneManager.getZone(zoneId).ifPresent(zone -> {
                         new ZoneSettingsMenu(player, zone, zoneManager, zoneRepository, langManager, scheduler).open();
@@ -56,12 +57,12 @@ public class ChatInputListener implements Listener {
             try {
                 ZoneValidator validator = new ZoneValidator(logger);
                 long ticks = validator.parseResetInterval(message);
-                
+
                 ZoneSettingsMenu.pendingIntervalInput.remove(player.getUniqueId());
-                
+
                 zoneManager.getZone(zoneId).ifPresent(zone -> {
                     zone.setResetIntervalTicks(ticks);
-                    
+
                     if (zone instanceof ZoneImpl impl) {
                         try {
                             zoneRepository.saveZone(impl);
@@ -69,14 +70,14 @@ public class ChatInputListener implements Listener {
                             logger.error("Error saving zone '{}' after interval update", e, zone.getId());
                         }
                     }
-                    
+
                     player.sendMessage(langManager.getMessage("gui.settings-interval-success", "interval", message));
-                    
+
                     scheduler.runSync(() -> {
                         new ZoneSettingsMenu(player, zone, zoneManager, zoneRepository, langManager, scheduler).open();
                     });
                 });
-                
+
             } catch (IllegalArgumentException e) {
                 player.sendMessage(langManager.getMessage("gui.settings-interval-invalid"));
             }

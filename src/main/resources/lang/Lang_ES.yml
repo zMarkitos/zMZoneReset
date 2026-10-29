@@ -13,7 +13,7 @@ general:
   global-spawn-clear: "{prefix} &aSpawn global eliminado."
   reload: "{prefix} &aPlugin recargado correctamente."
   update-join: "{prefix} &eSe está ejecutando una comprobación de actualizaciones en segundo plano."
-  update-available: "{prefix} &6Actualización disponible: &f{current} &8-> &a{latest} &7(ID: {resource})"
+  update-available: "{prefix} &6Actualización disponible: &f{current} &8-> &a{latest} &7(Descarga: {resource})"
   update-latest: "{prefix} &aEstás usando la última versión &f{current}&a."
 
 wand:
@@ -145,6 +145,12 @@ gui:
     - " &8| &fde la zona y los guarda."
     - ""
     - "&#D3FF8B✔ Clic para capturar."
+  settings-capture-lore-busy:
+    - ""
+    - " &8| &eCaptura en progreso..."
+    - " &8| &fEspera a que termine."
+    - ""
+    - "&cOcupado. Inténtalo más tarde."
   settings-titles: "&fConfiguración &8→ &#D3FF8B&lTítulos"
   settings-titles-lore:
     - ""

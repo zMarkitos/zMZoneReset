@@ -8,6 +8,7 @@ import dev.zm.zonereset.api.zone.Zone;
 import dev.zm.zonereset.gui.BaseMenu;
 import dev.zm.zonereset.lang.LanguageManager;
 import dev.zm.zonereset.scheduler.ZoneScheduler;
+import dev.zm.zonereset.snapshot.SnapshotCapture;
 import dev.zm.zonereset.zone.ZoneRepository;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -20,16 +21,26 @@ public class ZoneMainMenu extends BaseMenu {
     private final ZoneRepository zoneRepository;
     private final LanguageManager langManager;
     private final ZoneScheduler scheduler;
+    private final SnapshotCapture snapshotCapture;
 
+    /** Constructor de compatibilidad sin SnapshotCapture. */
     public ZoneMainMenu(Player player, Zone zone,
             ZoneManagerAPI zoneManager, ZoneRepository zoneRepository,
             LanguageManager langManager, ZoneScheduler scheduler) {
+        this(player, zone, zoneManager, zoneRepository, langManager, scheduler, null);
+    }
+
+    public ZoneMainMenu(Player player, Zone zone,
+            ZoneManagerAPI zoneManager, ZoneRepository zoneRepository,
+            LanguageManager langManager, ZoneScheduler scheduler,
+            SnapshotCapture snapshotCapture) {
         super(player);
         this.zone = zone;
         this.zoneManager = zoneManager;
         this.zoneRepository = zoneRepository;
         this.langManager = langManager;
         this.scheduler = scheduler;
+        this.snapshotCapture = snapshotCapture;
     }
 
     @Override
@@ -68,7 +79,8 @@ public class ZoneMainMenu extends BaseMenu {
     public void handleClick(InventoryClickEvent event) {
         int slot = event.getSlot();
         if (slot == 11) {
-            new ZoneSettingsMenu(player, zone, zoneManager, zoneRepository, langManager, scheduler).open();
+            new ZoneSettingsMenu(player, zone, zoneManager, zoneRepository, langManager,
+                    scheduler, snapshotCapture).open();
         } else if (slot == 13) {
             new ZoneInfoMenu(player, zone, zoneManager, zoneRepository, langManager, scheduler).open();
         } else if (slot == 15) {

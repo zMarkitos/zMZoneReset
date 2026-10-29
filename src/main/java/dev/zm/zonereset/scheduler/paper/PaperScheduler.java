@@ -2,6 +2,7 @@ package dev.zm.zonereset.scheduler.paper;
 
 import dev.zm.zonereset.scheduler.ZoneScheduler;
 import dev.zm.zonereset.scheduler.ZoneTask;
+import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -9,6 +10,18 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.Objects;
 
 public final class PaperScheduler implements ZoneScheduler {
+
+    /** Returned when a task was executed inline because we were already on the main thread. */
+    private static final ZoneTask COMPLETED = new ZoneTask() {
+        @Override
+        public void cancel() {
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return false;
+        }
+    };
 
     private final Plugin plugin;
 
@@ -47,6 +60,13 @@ public final class PaperScheduler implements ZoneScheduler {
     public ZoneTask runOnChunk(World world, int chunkX, int chunkZ, Runnable task) {
         Objects.requireNonNull(world, "world");
         Objects.requireNonNull(task, "task");
+
+        // Paper has a single main thread: if we are already on it, execute
+        // immediately instead of queueing another tick of latency.
+        if (Bukkit.isPrimaryThread()) {
+            task.run();
+            return COMPLETED;
+        }
         return runSync(task);
     }
 

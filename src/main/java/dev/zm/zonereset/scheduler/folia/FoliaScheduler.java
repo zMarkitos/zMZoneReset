@@ -99,6 +99,11 @@ public final class FoliaScheduler implements ZoneScheduler {
     }
 
     @Override
+    public boolean isFolia() {
+        return true;
+    }
+
+    @Override
     public ZoneTask runSync(Runnable task) {
         Objects.requireNonNull(task, "task");
         try {

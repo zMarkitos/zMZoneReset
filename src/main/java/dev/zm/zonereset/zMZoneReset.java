@@ -35,6 +35,7 @@ import dev.zm.zonereset.storage.ZstdCompressionCodec;
 import dev.zm.zonereset.lang.ColorParser;
 import dev.zm.zonereset.zone.ZoneManagerImpl;
 import dev.zm.zonereset.zone.ZoneRepository;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -74,6 +75,9 @@ public final class zMZoneReset extends JavaPlugin {
         private PlayerSelectionStore selectionStore;
         private Instant startupInstant;
 
+        /** Serializes /zmr reload calls so two admins cannot interleave reloads. */
+        private final java.util.concurrent.atomic.AtomicBoolean reloading = new java.util.concurrent.atomic.AtomicBoolean(false);
+
         @Override
         public void onEnable() {
                 startupInstant = Instant.now();
@@ -112,12 +116,16 @@ public final class zMZoneReset extends JavaPlugin {
                 BlockEntitySerializer entitySerializer = new BlockEntitySerializer(zoneLogger);
                 diffTracker = new DiffTracker(diffStore, entitySerializer, zoneLogger);
 
+                int captureChunksPerTick = configManager.getConfig() != null
+                                ? configManager.getConfig().getCaptureChunksPerTick()
+                                : 2;
                 snapshotCapture = new SnapshotCapture(
                                 scheduler,
                                 snapshotStorage,
                                 entitySerializer,
                                 zoneManager,
-                                zoneLogger);
+                                zoneLogger,
+                                captureChunksPerTick);
 
                 PerformanceMonitor perfMonitor = new PerformanceMonitor();
                 ResetQueue queue = new ResetQueue();
@@ -147,7 +155,7 @@ public final class zMZoneReset extends JavaPlugin {
                                 stateStore);
 
                 dev.zm.zonereset.reset.strategy.AutoStrategySelector autoSelector = new dev.zm.zonereset.reset.strategy.AutoStrategySelector(
-                                diffTracker);
+                                diffTracker, configManager);
 
                 resetManager = new ResetManagerImpl(
                                 queue,
@@ -220,10 +228,11 @@ public final class zMZoneReset extends JavaPlugin {
                                 getPluginMeta().getVersion());
 
                 integrationManager.init();
-                new VersionChecker(this, zoneLogger, langManager).checkAsync();
-                Bukkit.getPluginManager().registerEvents(new AdminNotificationListener(langManager), this);
+                VersionChecker versionChecker = new VersionChecker(this, scheduler, zoneLogger, langManager);
+                versionChecker.checkAsync();
+                Bukkit.getPluginManager().registerEvents(new AdminNotificationListener(langManager, versionChecker), this);
                 try {
-                        new dev.zm.zonereset.integration.PluginMetrics(this, 33670);
+                        new Metrics(this, 33670);
                 } catch (Throwable ignored) {
                 }
 
@@ -231,6 +240,7 @@ public final class zMZoneReset extends JavaPlugin {
                                 zoneManager,
                                 resetManager,
                                 langManager,
+                                scheduler,
                                 configManager::getConfig);
 
                 scheduler.runTaskTimer(timerTask, 20L, 20L);
@@ -250,18 +260,16 @@ public final class zMZoneReset extends JavaPlugin {
                 }
 
                 if (zoneManager != null && zoneRepository != null) {
-                        zoneManager.getAllZones().forEach(z -> {
-                                try {
-                                        zoneRepository.saveZone(
-                                                        (dev.zm.zonereset.zone.ZoneImpl) z);
-                                } catch (Exception e) {
-                                        zoneLogger.error(
-                                                        "Error saving zone {}: {}",
-                                                        e,
-                                                        z.getId(),
-                                                        e.getMessage());
-                                }
-                        });
+                        // One write for all zones: avoids O(n) full-file rewrites on shutdown.
+                        List<dev.zm.zonereset.zone.ZoneImpl> zones = new java.util.ArrayList<>(
+                                        zoneManager.getZoneCount());
+                        zoneManager.getAllZones().forEach(z -> zones
+                                        .add((dev.zm.zonereset.zone.ZoneImpl) z));
+                        try {
+                                zoneRepository.saveAllZones(zones);
+                        } catch (Exception e) {
+                                zoneLogger.error("Error saving zones on shutdown: {}", e, e.getMessage());
+                        }
                 }
 
                 if (diffStore != null) {
@@ -276,9 +284,26 @@ public final class zMZoneReset extends JavaPlugin {
         }
 
         public void reloadPlugin(org.bukkit.command.CommandSender sender) {
+                if (!reloading.compareAndSet(false, true)) {
+                        if (sender != null) {
+                                sender.sendMessage("§e[zMZoneReset] A reload is already in progress. Please wait.");
+                        }
+                        return;
+                }
+
                 try {
+                        // Reload configuration and language only. This method intentionally
+                        // never touches zone timers, statuses, pending resets, diff data or
+                        // snapshots: a zone that is one second away from regenerating keeps
+                        // its exact remaining time and its queued/running reset survives.
                         configManager.load();
                         zoneLogger.setDebugEnabled(configManager.isDebugMode());
+
+                        if (snapshotCapture != null && configManager.getConfig() != null) {
+                                // Volatile field: safe even if a capture is in progress.
+                                snapshotCapture.setChunksPerTick(
+                                                configManager.getConfig().getCaptureChunksPerTick());
+                        }
 
                         langManager.load(
                                         configManager.getConfig() != null
@@ -289,9 +314,14 @@ public final class zMZoneReset extends JavaPlugin {
                                 sender.sendMessage(langManager.getMessage("general.reload"));
                         }
 
+                        int pending = resetManager != null ? resetManager.getQueueSize() : 0;
+                        boolean activeReset = resetManager != null
+                                        && resetManager.getCurrentActiveJob().isPresent();
                         zoneLogger.info(
-                                        "Plugin reloaded by {}.",
-                                        sender != null ? sender.getName() : "console");
+                                        "Plugin reloaded by {} (active reset preserved: {}, queued resets preserved: {}).",
+                                        sender != null ? sender.getName() : "console",
+                                        activeReset,
+                                        pending);
 
                 } catch (Exception e) {
                         zoneLogger.error("Error during reload: {}", e, e.getMessage());
@@ -299,6 +329,8 @@ public final class zMZoneReset extends JavaPlugin {
                         if (sender != null) {
                                 sender.sendMessage("§cError during reload: " + e.getMessage());
                         }
+                } finally {
+                        reloading.set(false);
                 }
         }
 

@@ -5,6 +5,7 @@ import dev.zm.zonereset.api.zone.Zone;
 import dev.zm.zonereset.gui.BaseMenu;
 import dev.zm.zonereset.lang.LanguageManager;
 import dev.zm.zonereset.scheduler.ZoneScheduler;
+import dev.zm.zonereset.snapshot.SnapshotCapture;
 import dev.zm.zonereset.zone.ZoneImpl;
 import dev.zm.zonereset.zone.ZoneRepository;
 import org.bukkit.Bukkit;
@@ -27,6 +28,7 @@ public class ZoneSettingsMenu extends BaseMenu {
     private final ZoneRepository zoneRepository;
     private final LanguageManager langManager;
     private final ZoneScheduler scheduler;
+    private final SnapshotCapture snapshotCapture;
 
     public ZoneSettingsMenu(Player player,
             Zone zone,
@@ -34,12 +36,23 @@ public class ZoneSettingsMenu extends BaseMenu {
             ZoneRepository zoneRepository,
             LanguageManager langManager,
             ZoneScheduler scheduler) {
+        this(player, zone, zoneManager, zoneRepository, langManager, scheduler, null);
+    }
+
+    public ZoneSettingsMenu(Player player,
+            Zone zone,
+            ZoneManagerAPI zoneManager,
+            ZoneRepository zoneRepository,
+            LanguageManager langManager,
+            ZoneScheduler scheduler,
+            SnapshotCapture snapshotCapture) {
         super(player);
         this.zone = zone;
         this.zoneManager = zoneManager;
         this.zoneRepository = zoneRepository;
         this.langManager = langManager;
         this.scheduler = scheduler;
+        this.snapshotCapture = snapshotCapture;
     }
 
     @Override
@@ -104,8 +117,12 @@ public class ZoneSettingsMenu extends BaseMenu {
                 langManager.getMessage("gui.settings-action"),
                 actionLore.toArray(new String[0])));
 
-        List<String> captureLore = langManager.getMessageList("gui.settings-capture-lore");
-        inventory.setItem(30, createItem(Material.SCAFFOLDING,
+        boolean capturing = snapshotCapture != null && snapshotCapture.isCapturing(zone.getId());
+        List<String> captureLore = capturing
+                ? langManager.getMessageList("gui.settings-capture-lore-busy")
+                : langManager.getMessageList("gui.settings-capture-lore");
+        Material captureMaterial = capturing ? Material.CLOCK : Material.SCAFFOLDING;
+        inventory.setItem(30, createItem(captureMaterial,
                 langManager.getMessage("gui.settings-capture"),
                 captureLore.toArray(new String[0])));
 
@@ -184,6 +201,11 @@ public class ZoneSettingsMenu extends BaseMenu {
             open();
 
         } else if (slot == 30) {
+            // Bloquear si ya hay captura activa para esta zona
+            if (snapshotCapture != null && snapshotCapture.isCapturing(zone.getId())) {
+                player.sendMessage(langManager.getMessage("prefix") + " §cYa hay una captura en progreso para esta zona.");
+                return;
+            }
             player.closeInventory();
             Bukkit.dispatchCommand(player, "zmr capture " + zone.getId());
 

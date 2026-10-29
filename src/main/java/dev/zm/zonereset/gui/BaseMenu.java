@@ -1,6 +1,3 @@
-// file: BaseMenu.java
-// description: Abstract base class for all GUIs. Implements InventoryHolder and provides utilities for item creation and color parsing.
-
 package dev.zm.zonereset.gui;
 
 import org.bukkit.Bukkit;

@@ -73,25 +73,26 @@ public final class ResetEngine {
             return;
         }
 
-        currentJob = queue.poll().orElse(null);
+        ResetJobImpl job = queue.poll().orElse(null);
+        currentJob = job;
 
-        if (currentJob == null) {
+        if (job == null) {
             isProcessing.set(false);
             return;
         }
 
         logger.info("Iniciando ResetJob {} para zona '{}' (Estrategia: {})",
-                currentJob.getJobId(),
-                currentJob.getZone().getId(),
-                currentJob.getStrategy());
+                job.getJobId(),
+                job.getZone().getId(),
+                job.getStrategy());
 
-        ZoneImpl zone = (ZoneImpl) currentJob.getZone();
+        ZoneImpl zone = (ZoneImpl) job.getZone();
         zone.setStatus(ZoneStatus.RESETTING);
         stateStore.markResetting(zone.getId());
 
-        Bukkit.getPluginManager().callEvent(new ZoneResetStartEvent(currentJob));
+        Bukkit.getPluginManager().callEvent(new ZoneResetStartEvent(job));
 
-        dev.zm.zonereset.api.reset.ResetStrategy strategy = currentJob.getStrategy();
+        dev.zm.zonereset.api.reset.ResetStrategy strategy = job.getStrategy();
         ResetStrategyHandler handler = strategy == dev.zm.zonereset.api.reset.ResetStrategy.DIFF
                 ? diffHandler
                 : snapshotHandler;
@@ -99,53 +100,71 @@ public final class ResetEngine {
         World world = Bukkit.getWorld(zone.getWorldUID());
         if (world == null) {
             logger.error("El mundo de la zona '{}' no está cargado. Cancelando reset.", zone.getId());
-            failJobAndContinue();
+            failJobAndContinue(job, new RuntimeException("World not loaded"));
             return;
         }
 
-        currentJob.setState(ResetJobState.PREPARING);
-        handler.prepareAsync(currentJob)
-                .thenComposeAsync(context -> {
-                    currentJob.setState(ResetJobState.EXECUTING);
-                    return handler.executeReset(currentJob, world, context)
-                            .thenApply(v -> context);
-                }, scheduler::runAsync)
-                .thenComposeAsync(context -> {
-                    currentJob.setState(ResetJobState.VERIFYING);
-                    return handler.verifyAndCleanup(currentJob, world, context);
-                }, scheduler::runAsync)
-                .whenComplete((result, ex) -> {
-                    scheduler.runSync(() -> {
-                        if (ex != null) {
-                            logger.error("Error durante ResetJob {} para zona '{}': {}", ex, currentJob.getJobId(),
-                                    zone.getId(), ex.getMessage());
-                            currentJob.markFailed();
-                            Bukkit.getPluginManager().callEvent(new ZoneResetFailedEvent(currentJob, ex));
-                        } else {
-                            currentJob.setState(ResetJobState.COMPLETED);
-                            currentJob.setProgress(1.0);
-                            logger.info("ResetJob {} completado con éxito.", currentJob.getJobId());
-                            Bukkit.getPluginManager().callEvent(new ZoneResetCompleteEvent(currentJob));
-                        }
+        try {
+            job.setState(ResetJobState.PREPARING);
+            handler.prepareAsync(job)
+                    .thenComposeAsync(context -> {
+                        job.setState(ResetJobState.EXECUTING);
+                        return handler.executeReset(job, world, context)
+                                .thenApply(v -> context);
+                    }, scheduler::runAsync)
+                    .thenComposeAsync(context -> {
+                        job.setState(ResetJobState.VERIFYING);
+                        return handler.verifyAndCleanup(job, world, context);
+                    }, scheduler::runAsync)
+                    .whenComplete((result, ex) -> {
+                        // Completion is always marshalled back to the server thread.
+                        scheduler.runSync(() -> {
+                            if (ex != null) {
+                                logger.error("Error durante ResetJob {} para zona '{}': {}", ex, job.getJobId(),
+                                        zone.getId(), ex.getMessage());
+                                job.markFailed();
+                                Bukkit.getPluginManager().callEvent(new ZoneResetFailedEvent(job, ex));
+                            } else {
+                                job.setState(ResetJobState.COMPLETED);
+                                job.setProgress(1.0);
+                                logger.info("ResetJob {} completado con éxito.", job.getJobId());
+                                Bukkit.getPluginManager().callEvent(new ZoneResetCompleteEvent(job));
+                            }
 
-                        zone.setStatus(ZoneStatus.READY);
-                        zone.resetTimer();
-                        stateStore.clearResetting(zone.getId());
-                        processNext();
+                            zone.setStatus(ZoneStatus.READY);
+                            zone.resetTimer();
+                            stateStore.clearResetting(zone.getId());
+                            currentJob = null;
+                            processNext();
+                        });
                     });
-                });
+        } catch (Throwable t) {
+            // A handler that throws synchronously must never leave the engine
+            // permanently locked (which would block every future reset).
+            logger.error("Error iniciando ResetJob {} para zona '{}': {}", t, job.getJobId(), zone.getId(),
+                    t.getMessage());
+            failJobAndContinue(job, t);
+        }
     }
 
-    private void failJobAndContinue() {
-        if (currentJob != null) {
-            currentJob.markFailed();
-            ZoneImpl failedZone = (ZoneImpl) currentJob.getZone();
+    private void failJobAndContinue(ResetJobImpl job, Throwable cause) {
+        if (job != null) {
+            job.markFailed();
+            ZoneImpl failedZone = (ZoneImpl) job.getZone();
             failedZone.setStatus(ZoneStatus.READY);
             failedZone.resetTimer();
-            stateStore.clearResetting(currentJob.getZone().getId());
+            stateStore.clearResetting(job.getZone().getId());
             Bukkit.getPluginManager()
-                    .callEvent(new ZoneResetFailedEvent(currentJob, new RuntimeException("Job failed internally")));
+                    .callEvent(new ZoneResetFailedEvent(job, cause));
         }
-        processNext();
+        currentJob = null;
+        // Defer the next job instead of recursing: a burst of invalid jobs
+        // (for example after a world was unloaded) can no longer overflow the
+        // stack or monopolize the region thread.
+        if (shutdown.get()) {
+            isProcessing.set(false);
+        } else {
+            scheduler.runSync(this::processNext);
+        }
     }
 }

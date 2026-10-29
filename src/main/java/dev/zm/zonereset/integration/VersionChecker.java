@@ -2,6 +2,7 @@ package dev.zm.zonereset.integration;
 
 import dev.zm.zonereset.core.logging.ZoneLogger;
 import dev.zm.zonereset.lang.LanguageManager;
+import dev.zm.zonereset.scheduler.ZoneScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -14,12 +15,17 @@ import java.net.URL;
 public final class VersionChecker {
 
     private final JavaPlugin plugin;
+    private final ZoneScheduler scheduler;
     private final ZoneLogger logger;
     private final LanguageManager langManager;
     private static final int SPIGOT_RESOURCE_ID = 138318;
 
-    public VersionChecker(JavaPlugin plugin, ZoneLogger logger, LanguageManager langManager) {
+    private boolean updateAvailable = false;
+    private String updateMessage = null;
+
+    public VersionChecker(JavaPlugin plugin, ZoneScheduler scheduler, ZoneLogger logger, LanguageManager langManager) {
         this.plugin = plugin;
+        this.scheduler = scheduler;
         this.logger = logger;
         this.langManager = langManager;
     }
@@ -28,7 +34,7 @@ public final class VersionChecker {
         if (SPIGOT_RESOURCE_ID <= 0) {
             return;
         }
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        scheduler.runAsync(() -> {
             try {
                 URL url = new URL("https://api.spigotmc.org/legacy/update.php?resource=" + SPIGOT_RESOURCE_ID);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -38,22 +44,60 @@ public final class VersionChecker {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                     String latest = reader.readLine();
                     String current = plugin.getDescription().getVersion();
-                    if (latest != null && !latest.equalsIgnoreCase(current)) {
-                        String msg = langManager.getMessage("general.update-available", "current", current, "latest",
-                                latest, "resource", String.valueOf(SPIGOT_RESOURCE_ID));
-                        logger.info("{}", msg);
+                    if (latest != null && isNewerVersion(current, latest)) {
+                        this.updateAvailable = true;
+                        this.updateMessage = langManager.getMessage("general.update-available", "current", current,
+                                "latest",
+                                latest, "resource",
+                                "https://www.spigotmc.org/resources/zmzonereset-automatic-zone-reset."
+                                        + SPIGOT_RESOURCE_ID + "/");
+                        Bukkit.getConsoleSender().sendMessage(updateMessage);
+
                         for (Player player : Bukkit.getOnlinePlayers()) {
                             if (player.hasPermission("zmzonereset.admin")) {
-                                player.sendMessage(msg);
+                                player.sendMessage(updateMessage);
                             }
                         }
                     } else {
-                        logger.info("{}", langManager.getMessage("general.update-latest", "current", current));
+                        Bukkit.getConsoleSender()
+                                .sendMessage(langManager.getMessage("general.update-latest", "current", current));
                     }
                 }
             } catch (Exception e) {
                 logger.warn("Version check failed: {}", e.getMessage());
             }
         });
+    }
+
+    public boolean isUpdateAvailable() {
+        return updateAvailable;
+    }
+
+    public String getUpdateMessage() {
+        return updateMessage;
+    }
+
+    private boolean isNewerVersion(String current, String latest) {
+        try {
+            String[] currParts = current.split("\\.");
+            String[] latParts = latest.split("\\.");
+            int length = Math.max(currParts.length, latParts.length);
+            for (int i = 0; i < length; i++) {
+                int c = i < currParts.length ? parsePart(currParts[i]) : 0;
+                int l = i < latParts.length ? parsePart(latParts[i]) : 0;
+                if (l > c)
+                    return true;
+                if (l < c)
+                    return false;
+            }
+        } catch (Exception e) {
+            return !current.equalsIgnoreCase(latest);
+        }
+        return false;
+    }
+
+    private int parsePart(String part) {
+        String num = part.replaceAll("\\D", "");
+        return num.isEmpty() ? 0 : Integer.parseInt(num);
     }
 }

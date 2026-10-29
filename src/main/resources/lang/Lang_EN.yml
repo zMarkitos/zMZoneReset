@@ -13,7 +13,7 @@ general:
   global-spawn-clear: "{prefix} &aGlobal spawn removed."
   reload: "{prefix} &aPlugin reloaded successfully."
   update-join: "{prefix} &ePerforming an update check in the background."
-  update-available: "{prefix} &6Update available: &f{current} &8-> &a{latest} &7(ID: {resource})"
+  update-available: "{prefix} &6Update available: &f{current} &8-> &a{latest} &7(Download: {resource})"
   update-latest: "{prefix} &aYou are using the latest version &f{current}&a."
 
 wand:
@@ -145,6 +145,12 @@ gui:
     - " &8| &fof the zone and save them."
     - ""
     - "&#D3FF8B✔ Click to capture."
+  settings-capture-lore-busy:
+    - ""
+    - " &8| &eCapture in progress..."
+    - " &8| &fWait for it to finish."
+    - ""
+    - "&cBusy. Try again later."
   settings-titles: "&fSettings &8→ &#D3FF8B&lTitles"
   settings-titles-lore:
     - ""

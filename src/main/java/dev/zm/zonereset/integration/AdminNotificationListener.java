@@ -1,7 +1,6 @@
 package dev.zm.zonereset.integration;
 
 import dev.zm.zonereset.lang.LanguageManager;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -11,9 +10,11 @@ import org.bukkit.event.player.PlayerJoinEvent;
 public final class AdminNotificationListener implements Listener {
 
     private final LanguageManager langManager;
+    private final VersionChecker versionChecker;
 
-    public AdminNotificationListener(LanguageManager langManager) {
+    public AdminNotificationListener(LanguageManager langManager, VersionChecker versionChecker) {
         this.langManager = langManager;
+        this.versionChecker = versionChecker;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -22,8 +23,10 @@ public final class AdminNotificationListener implements Listener {
         if (!player.hasPermission("zmzonereset.admin")) {
             return;
         }
-        String message = langManager.getMessage("general.update-join");
-        player.sendMessage(message);
-        Bukkit.getConsoleSender().sendMessage(message);
+
+        // Notificar sólo si hay una actualización disponible
+        if (versionChecker.isUpdateAvailable()) {
+            player.sendMessage(versionChecker.getUpdateMessage());
+        }
     }
 }

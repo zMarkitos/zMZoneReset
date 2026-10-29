@@ -211,9 +211,35 @@ public final class ZoneRepository {
                 .build();
     }
 
-    public void saveZone(ZoneImpl zone) throws IOException {
+    public synchronized void saveZone(ZoneImpl zone) throws IOException {
         Objects.requireNonNull(zone, "zone");
 
+        YamlConfiguration config = loadZonesConfig();
+        writeZone(config, zone);
+        config.save(zonesFile);
+        logger.debug("Zona '{}' guardada en zones.yml.", zone.getId());
+    }
+
+    /**
+     * Saves every registered zone in a single zones.yml write. Used on
+     * shutdown where saving N zones previously re-read and re-wrote the whole
+     * file N times.
+     */
+    public synchronized void saveAllZones(Collection<ZoneImpl> zones) throws IOException {
+        Objects.requireNonNull(zones, "zones");
+        if (zones.isEmpty()) {
+            return;
+        }
+
+        YamlConfiguration config = loadZonesConfig();
+        for (ZoneImpl zone : zones) {
+            writeZone(config, zone);
+        }
+        config.save(zonesFile);
+        logger.debug("{} zona(s) guardadas en zones.yml.", zones.size());
+    }
+
+    private YamlConfiguration loadZonesConfig() throws IOException {
         YamlConfiguration config = new YamlConfiguration();
         if (zonesFile.exists()) {
             try {
@@ -222,7 +248,10 @@ public final class ZoneRepository {
                 throw new IOException("Error leyendo zones.yml antes de guardar", e);
             }
         }
+        return config;
+    }
 
+    private void writeZone(YamlConfiguration config, ZoneImpl zone) {
         String path = "zones." + zone.getId();
 
         config.set(path + ".id", zone.getId());
@@ -251,12 +280,9 @@ public final class ZoneRepository {
         config.set(path + ".reset.interval", ticks < 0 ? "-1" : String.valueOf(ticks));
 
         config.set(path + ".security.players.action-during-reset", zone.getPlayerResetAction().name());
-
-        config.save(zonesFile);
-        logger.debug("Zona '{}' guardada en zones.yml.", zone.getId());
     }
 
-    public boolean deleteZone(String zoneId) {
+    public synchronized boolean deleteZone(String zoneId) {
         Objects.requireNonNull(zoneId, "zoneId");
 
         if (!zonesFile.exists())
@@ -285,7 +311,7 @@ public final class ZoneRepository {
         return false;
     }
 
-    public boolean zoneFileExists(String zoneId) {
+    public synchronized boolean zoneFileExists(String zoneId) {
         if (!zonesFile.exists())
             return false;
         YamlConfiguration config = YamlConfiguration.loadConfiguration(zonesFile);

@@ -1,25 +1,23 @@
-// file: DiffStore.java
-// description: Stores block changes per zone for the DIFF reset strategy. Tracks original block states.
-
 package dev.zm.zonereset.diff;
 
 import dev.zm.zonereset.snapshot.BlockRecord;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class DiffStore {
 
-    private final Map<String, Map<Long, BlockChange>> zoneChanges = new HashMap<>();
+    private final Map<String, Map<Long, BlockChange>> zoneChanges = new ConcurrentHashMap<>();
 
     public boolean recordIfAbsent(String zoneId, BlockRecord original) {
         Map<Long, BlockChange> changes = zoneChanges.computeIfAbsent(
-                zoneId, $ -> new HashMap<>());
+                zoneId, $ -> new ConcurrentHashMap<>());
         long packed = original.packedPos;
-        if (changes.containsKey(packed)) {
-            return false;
-        }
-        changes.put(packed, new BlockChange(original));
-        return true;
+        // Atomic check-and-put: avoids losing/duplicating records when an
+        // explosion or multiple listeners race on the same position.
+        return changes.putIfAbsent(packed, new BlockChange(original)) == null;
     }
 
     public int getChangeCount(String zoneId) {

@@ -4,6 +4,11 @@ import org.bukkit.World;
 
 public interface ZoneScheduler {
 
+    /** True when running on Folia (regionised threading). */
+    default boolean isFolia() {
+        return false;
+    }
+
     ZoneTask runSync(Runnable task);
 
     ZoneTask runSyncLater(Runnable task, long delayTicks);

@@ -59,6 +59,13 @@ performance:
   # reset simultaneously. Increase this value cautiously.
   max-concurrent-resets: 1
 
+  # Number of chunks processed per server tick during a
+  # /zmr capture operation.
+  # - Lower values (1-2): minimal TPS impact, slower capture.
+  # - Higher values (4-8): faster capture, more tick pressure.
+  # Default: 2. Increase only if TPS is consistently high.
+  capture-chunks-per-tick: 2
+
 # ============================================================
 #  RESET STRATEGY
 #  Defines default methodologies for restoring zones.

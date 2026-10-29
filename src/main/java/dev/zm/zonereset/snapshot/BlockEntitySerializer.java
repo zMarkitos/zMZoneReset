@@ -18,8 +18,15 @@ public final class BlockEntitySerializer {
 
     public byte[] captureBlockEntity(Block block) {
         Objects.requireNonNull(block, "block");
+        return captureBlockEntity(block.getState());
+    }
 
-        BlockState state = block.getState();
+    /**
+     * Captures a block entity from an already-obtained {@link BlockState}.
+     * Avoids creating a second state object when the caller already has one.
+     */
+    public byte[] captureBlockEntity(BlockState state) {
+        Objects.requireNonNull(state, "state");
 
         if (state instanceof TileState tileState) {
             return serializeTileState(tileState);
